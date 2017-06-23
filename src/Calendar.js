@@ -42,7 +42,7 @@ export default class CalendarView {
 
         // map colors to id list
         this.color = d3.scaleOrdinal(d3.schemeCategory10)
-            .domain(events.map(d => d.id))
+            .domain(events.map(d => d.name))
 
         // hang on to events for renderin
         this.events = events
@@ -83,7 +83,7 @@ export default class CalendarView {
         rect.enter()
             .append("rect")
                 .attr("class", "event-rect")
-                .attr("fill", d => this.color(d.id))
+                .attr("fill", d => this.color(d.name))
                 .call(d3.drag()
                     .on("start", unwrapCallback(this, "onDragStart"))
                     .on("drag", unwrapCallback(this, "onDrag"))
