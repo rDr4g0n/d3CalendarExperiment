@@ -36,26 +36,50 @@ class CalendarView {
         // set size
         this.svg.attr("width", this.w).attr("height", this.h);
 
+        /*
+         * - height is duration
+         */
+
         // create scales
-        this.xScale = d3.scaleTime()
-            .range([0, this.w])
+        let bandSize = this.w / days
+        let bands = []
+        for(let i = 0; i < days; i++){
+            bands.push(i * bandSize)
+        }
+        this.xScale = d3.scaleQuantize()
+            .range(bands)
             .domain([start, start + (DAY * days)])
+
+        // define a getter for width of an element
+        // TODO - calculate width based on intersections
+        this.getWidth = d => bandSize
 
         // relative xscale for distance between points of
         // time but not location on the timeline
-        // TODO - theres definitely a d3 way to do this
-        this.xScale2 = this.xScale.copy()
-        let domain = this.xScale2.domain().map(d => d.getTime())
-        let inverseDomain0 = domain[0] * -1
-        this.xScale2.domain([domain[0] + inverseDomain0, domain[1] + inverseDomain0]);
 
+        // TODO - make yScale and getY duration configurable (right
+        // now its built around days)
         this.yScale = d3.scaleLinear()
             .range([0 + this.margins.top, this.h])
+            .domain([0, DAY])
 
-        // maps colors to ids
+        this.getY = d => {
+            // NOTE - assumes start is aligned to day
+            let remainder = (d.start - start) % DAY
+            return this.yScale(remainder)
+        }
+
+        // NOTE - this scale is for calculating height, not position
+        // TODO - there is certainly a d3 way to do this
+        this.yScale2 = d3.scaleLinear()
+            .range([0, this.h])
+            .domain([0, DAY])
+
+        // map colors to ids
         this.color = d3.scaleOrdinal(d3.schemeCategory10)
             .domain(data.map(d => d.id))
 
+        // hang on to data for renderin
         this.data = data
         this.drawEvents();
     }
@@ -67,7 +91,7 @@ class CalendarView {
         let rect = this.visG.selectAll("rect.event-rect")
             .data(this.data, d => d.id)
 
-        // :(
+        // hack to deal with d3 callbacks losing context
         let self = this;
 
         rect.enter().append("rect")
@@ -86,9 +110,9 @@ class CalendarView {
                 )
             .merge(rect)
                 .attr("x", d => this.xScale(d.start))
-                .attr("y", d => 0)
-                .attr("width", d => this.xScale2(d.duration))
-                .attr("height", this.yScale(1))
+                .attr("y", d => this.getY(d))
+                .attr("width", d => this.getWidth(d))
+                .attr("height", d => this.yScale2(d.duration))
 
         rect.exit().remove();
     }
@@ -112,6 +136,7 @@ class CalendarView {
         // aint no thang
     }
 }
+
 
 
 
@@ -140,8 +165,11 @@ let calendar = new CalendarView({
             duration: (2*HOUR),
             name: "cold yoga",
             id: Math.floor(Math.random() * 10000)
+        },{
+            start: new Date("2017-06-27T13:00:00Z").getTime(),
+            duration: (5*HOUR),
+            name: "cold yoga",
+            id: Math.floor(Math.random() * 10000)
         }
     ]
 })
-console.log(calendar)
-
