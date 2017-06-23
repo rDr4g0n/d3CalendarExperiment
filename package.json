@@ -1,0 +1,16 @@
+{
+  "name": "webapp",
+  "version": "0.0.1",
+  "description": "boilerplate for making webapps, but like... the way i like.",
+  "scripts": {},
+  "author": "John Matos",
+  "dependencies": {
+    "d3": "^4.9.1"
+  },
+  "devDependencies": {
+    "chokidar-cli": "^1.2.0",
+    "http-server": "^0.9.0",
+    "livereload": "^0.6.0",
+    "rollup": "^0.43.0"
+  }
+}
