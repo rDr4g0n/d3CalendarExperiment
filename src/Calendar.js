@@ -26,6 +26,7 @@ export default class CalendarView {
         this.start = start
         this.count = count
         this.unit = unit
+        this.end = this.start + (this.count * this.unit)
 
         this.svg = d3.select(el);
         this.g = this.svg.append("g")
@@ -40,23 +41,25 @@ export default class CalendarView {
 
         this.createScales()
 
+        this.dispatch = d3.dispatch("change")
+
         // map colors to id list
         this.color = d3.scaleOrdinal(d3.schemeCategory10)
             .domain(events.map(d => d.name))
 
         // hang on to events for renderin
         this.events = events
-        this.drawEvents();
+        this.render();
     }
 
     createScales(){
         // this effectively subdivides the timeline into buckets
         // that are the size the user specifies (days, hours, weeks)
-        let bucketWidth = this.w / this.count
+        this.bucketWidth = this.w / this.count
         this.xScale = d3.scaleQuantize()
-            .domain([this.start, this.start + (this.unit * this.count)])
+            .domain([this.start, this.end])
             // let d3 generate equally spaces buckets
-            .range(d3.range(0, this.w, bucketWidth))
+            .range(d3.range(0, this.w, this.bucketWidth))
 
         // since x axis is bucketed to the user specified duration,
         // the y axis is "sub" duration. that is, if the user specified
@@ -71,12 +74,19 @@ export default class CalendarView {
         }
     }
 
+    render(){
+        this.drawEvents()
+    }
+
     drawEvents(){
-        // sort by start time, ascending
-        this.events = this.events.sort((a, b) => a.start - b.start)
+        // TODO - use d3 selection to filter this down
+        // instead of copying the whole dataset :/
+        let data = this.events.filter(d => {
+            return d.start > this.start && d.start < this.end
+        })
 
         let rect = this.g.selectAll("rect.event-rect")
-            .data(this.events, d => d.id)
+            .data(data, d => d.id)
 
         rect.enter()
             .append("rect")
@@ -103,6 +113,7 @@ export default class CalendarView {
 
     onDrag(context, e){
         let {x, y} = d3.event
+        let changed = false
 
         d3.select(context)
             .each(d => {
@@ -126,12 +137,19 @@ export default class CalendarView {
                 // value adds hours or minutes
                 newStart += this.yScale.invert(y)
                 
+                if(d.start !== newStart){
+                    changed = true
+                }
                 d.start = newStart
             })
 
+        if(changed){
+            this.dispatch.call("change")
+        }
+
         // rerender the events, keeping in mind that only events
         // which has changed will cause a DOM update
-        this.drawEvents()
+        this.render()
     }
 }
 
