@@ -51,14 +51,12 @@ export default class CalendarView {
 
     createScales(){
         // this effectively subdivides the timeline into buckets
-        // that are the size the user specifies.
-        let bandWidth = this.w / this.count
+        // that are the size the user specifies (days, hours, weeks)
+        let bucketWidth = this.w / this.count
         this.xScale = d3.scaleQuantize()
             .domain([this.start, this.start + (this.unit * this.count)])
-            .range(d3.range(0, this.w, bandWidth))
-
-        // define a getter for width of an element
-        this.getWidth = d => bandWidth
+            // let d3 generate equally spaces buckets
+            .range(d3.range(0, this.w, bucketWidth))
 
         // since x axis is bucketed to the user specified duration,
         // the y axis is "sub" duration. that is, if the user specified
@@ -91,7 +89,8 @@ export default class CalendarView {
             .merge(rect)
                 .attr("x", d => this.xScale(d.start))
                 .attr("y", d => this.getY(d))
-                .attr("width", d => this.getWidth(d))
+                // TODO - look for overlaps and reduce width to fit
+                .attr("width", this.bucketWidth)
                 .attr("height", d => this.yScale(d.duration))
 
         rect.exit().remove();
@@ -105,30 +104,26 @@ export default class CalendarView {
     onDrag(context, e){
         let {x, y} = d3.event
 
-        // commit new value to dataset
         d3.select(context)
             .each(d => {
                 let nearestX = 0
                 let range = this.xScale.range()
-                // figure out the nearest quantized value
-                // to the mouse x position
+                // figure out which bucket the user's mouse is over
                 // HACK - d3 has to provide an easy way
-                // to get this :/
+                // to get this... this is dumb
                 for(let i = 0; i < range.length; i++){
                     if(x > range[i]){
                         nearestX = range[i]
                     }
                 }
 
-                // the new start position will be based on that
-                // nearest quantized boundary. eg: if the unit is days
-                // and the mouse is in the day 2 area, then the new 
-                // start time will begin at day 2
+                // calculate a new start position, starting with the
+                // start time of the bucket the user's mouse is over
                 let newStart = this.xScale.invertExtent(nearestX)[0]
 
-                // now use the y offset to add the sub-unit value. that is
-                // if the users mouse is halfway down day 2, then we add half
-                // a day, so the new start time is day 2 + half a day
+                // now add the y offset to the start time, which adds
+                // the "sub-bucket" value. eg: if buckets are days, the y
+                // value adds hours or minutes
                 newStart += this.yScale.invert(y)
                 
                 d.start = newStart

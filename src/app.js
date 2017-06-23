@@ -20,6 +20,8 @@ new CalendarView({
     unit: DAY,
 
     // number of buckets
+    // NOTE - only does one row with `count` buckets
+    // TODO - grid of buckets
     count: 3,
 
     // thingies to draw all up on
