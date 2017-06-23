@@ -18,6 +18,8 @@ class CalendarView {
     constructor(config){
 		let {el, data, start, days} = config
 
+        this.start = start
+
         // build container with margins
         let svg = d3.select(el);
         let g = svg.append("g")
@@ -36,10 +38,6 @@ class CalendarView {
         // set size
         this.svg.attr("width", this.w).attr("height", this.h);
 
-        /*
-         * - height is duration
-         */
-
         // create scales
         let bandSize = this.w / days
         let bands = []
@@ -47,8 +45,8 @@ class CalendarView {
             bands.push(i * bandSize)
         }
         this.xScale = d3.scaleQuantize()
-            .range(bands)
             .domain([start, start + (DAY * days)])
+            .range(bands)
 
         // define a getter for width of an element
         // TODO - calculate width based on intersections
@@ -122,12 +120,26 @@ class CalendarView {
             .raise()
     }
     onDrag(context, e){
+        let {x, y} = d3.event
+
         // commit new value to dataset
         d3.select(context)
-            .attr("x", d => {
-                // TODO - dont use side effect here?
-                d.start = this.xScale.invert(d3.event.x)
-                return d3.event.x
+            .each(d => {
+                let nearestX = 0
+                let range = this.xScale.range()
+                for(let i = 0; i < range.length; i++){
+                    if(x > range[i]){
+                        nearestX = range[i]
+                    }
+                }
+                // use x to figure out day
+                // NOTE - assumes everything is day oriented
+                let newStart = this.xScale.invertExtent(nearestX)[0]
+
+                // use y to figure out sub-day
+                newStart += this.yScale.invert(y)
+                
+                d.start = newStart
             })
         // TODO - spensive?
         this.drawEvents()
